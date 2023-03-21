@@ -22,7 +22,31 @@ def standardize_variables(nonstandard_rules):
     @return variables (list) - a list of the variable names that were created.
         This list should contain only the variables that were used in rules.
     '''
-    raise RuntimeError("You need to write this part!")
+    standardized_rules = copy.deepcopy(nonstandard_rules)
+    original_var = 0
+    variables = []
+    for id in standardized_rules:
+      for value in standardized_rules[id]['antecedents']:
+        for i in range(len(value)):
+          if value[i] == 'something':
+            value[i] = str(original_var)
+            variables.append(value[i])
+      for i in range(len(standardized_rules[id]['consequent'])):
+        if standardized_rules[id]['consequent'][i] == 'something':
+          standardized_rules[id]['consequent'][i] = str(original_var)
+      original_var += 1
+      # print(standardized_rules[id])
+      
+          
+      
+      
+          
+    # for keys in standardized_rules[id]['consequent']:
+    #     for j in range(len(keys)):
+    #       if keys[j] == 'something':
+    #         keys[i] = str(original_var)       
+    # print(nonstandard_rules)
+    
     return standardized_rules, variables
 
 def unify(query, datum, variables):
@@ -73,7 +97,38 @@ def unify(query, datum, variables):
     unify([...,True],[...,False],[...]) should always return None, None, regardless of the 
       rest of the contents of the query or datum.
     '''
-    raise RuntimeError("You need to write this part!")
+    unification = []
+    subs = {}
+    
+    if query[-1] != datum[-1]:
+      return None, None
+    
+    unification = copy.deepcopy(query)
+    datum_cp = copy.deepcopy(datum)
+    
+    for i in range(len(unification) - 1):
+      temp_u = copy.deepcopy(unification[i])
+      temp_d = copy.deepcopy(datum_cp[i])
+      if unification[i] in variables and datum_cp[i] not in variables:
+        for j in range(len(unification) - 1):
+          if unification[j] == temp_u:
+            unification[j] = datum_cp[i]
+        subs[temp_u] = datum_cp[i]
+      if unification[i] not in variables and datum_cp[i] in variables:
+        for j in range(len(datum_cp) - 1):
+          if datum_cp[j] == temp_d:
+            datum_cp[j] = temp_u
+          if unification[j] == temp_d:
+            unification[j] = temp_u
+        subs[temp_d] = unification[i]
+      if unification[i] in variables and datum_cp[i] in variables:
+        for j in range(len(unification) - 1):
+          if unification[j] == temp_u:
+            unification[j] = datum_cp[i]
+        subs[temp_u] = datum_cp[i]
+      if unification[i] not in variables and datum_cp[i] not in variables and unification[i] != datum_cp[i]:
+        return None, None
+    
     return unification, subs
 
 def apply(rule, goals, variables):
@@ -138,7 +193,31 @@ def apply(rule, goals, variables):
         ['bald eagle','is','hungry',False]
       ]
     '''
-    raise RuntimeError("You need to write this part!")
+    applications = []
+    goalsets = []
+    
+    for i in range(len(goals)):
+      unif, subs = unify(goals[i], rule['consequent'], variables)
+      if unif != None and subs != None:
+        temp = copy.deepcopy(rule)
+        temp['consequent'] = unif
+        for j in range(len(temp['antecedents'])):
+          for k in range(len(temp['antecedents'][j])):
+            if temp['antecedents'][j][k] in variables:
+              while temp['antecedents'][j][k] in variables:
+                temp['antecedents'][j][k] = subs[temp['antecedents'][j][k]]
+        applications.append(temp)
+    
+    for j in range(len(applications)):
+      for i in range(len(goals)):
+        if goals[i] == applications[j]['consequent']:
+          temp = copy.deepcopy(goals)
+          temp.remove(temp[i])
+          for k in range(len(applications[j]['antecedents'])):
+            temp.append(applications[j]['antecedents'][k])
+          goalsets.append(temp)
+    
+    
     return applications, goalsets
 
 def backward_chain(query, rules, variables):
@@ -151,5 +230,27 @@ def backward_chain(query, rules, variables):
       that, when read in sequence, conclude by proving the truth of the query.
       If no proof of the query was found, you should return proof=None.
     '''
-    raise RuntimeError("You need to write this part!")
+    proof = []
+    queue = []
+    stack_actions = []
+    queue.append(query)
+    s = []
+    
+    while queue:
+      s.append(queue.pop(0)) 
+      for rule in rules:
+        if 'rule' in rule:
+          # print(rules[rule])
+          # print(s)
+          # print(variables)
+          # print(type(rules[rule]))
+          # print(type(s))
+          # print(type(variables))
+          applications, goalsets = apply(rule, s, variables)
+          print(applications)
+          print(goalsets)
+      
+    # print(query)
+    # print(rules)
+    # print(variables)
     return proof
