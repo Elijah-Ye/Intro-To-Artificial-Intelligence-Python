@@ -220,6 +220,9 @@ def apply(rule, goals, variables):
     
     return applications, goalsets
 
+
+
+
 def backward_chain(query, rules, variables):
     '''
     @param query: a proposition, you want to know if it is true
@@ -230,27 +233,41 @@ def backward_chain(query, rules, variables):
       that, when read in sequence, conclude by proving the truth of the query.
       If no proof of the query was found, you should return proof=None.
     '''
-    proof = []
     queue = []
-    stack_actions = []
-    queue.append(query)
-    s = []
     
-    while queue:
-      s.append(queue.pop(0)) 
-      for rule in rules:
-        if 'rule' in rule:
-          # print(rules[rule])
-          # print(s)
-          # print(variables)
-          # print(type(rules[rule]))
-          # print(type(s))
-          # print(type(variables))
-          applications, goalsets = apply(rule, s, variables)
-          print(applications)
-          print(goalsets)
-      
+    rules_cp = copy.deepcopy(rules)
+    
+    for rule in rules_cp:
+      unif, subs = unify(query, rules_cp[rule]['consequent'], variables)
+      if unif != None and subs != None:
+        queue.append([rules_cp[rule]])
+    
+    while queue and rules_cp:
+      # base case
+      s = queue.pop(0)
+      if s[0]['antecedents'] == []:
+        return s
+      # ----------------------------------------------------------------
+
+      for rule in list(rules_cp):
+        if 'triple' in rule:
+          # print(s[0]['antecedents'][0])
+          # print(rules_cp[rule]['consequent'])
+          # print('--------------------------------------------------------')
+          unif, subs = unify(s[0]['antecedents'][0], rules_cp[rule]['consequent'], variables)
+          if unif != None and subs != None:
+            s.insert(0, rules_cp[rule])
+            return s
+          else:
+            continue
+        else:
+          application, goalsets = apply(rules_cp[rule], s[0]['antecedents'][0], variables)
+          if application == [] and goalsets == []:
+            continue
+          else:
+            s.insert(0, application[0])
+            
     # print(query)
     # print(rules)
     # print(variables)
-    return proof
+    return None
