@@ -35,17 +35,6 @@ def standardize_variables(nonstandard_rules):
         if standardized_rules[id]['consequent'][i] == 'something':
           standardized_rules[id]['consequent'][i] = str(original_var)
       original_var += 1
-      # print(standardized_rules[id])
-      
-          
-      
-      
-          
-    # for keys in standardized_rules[id]['consequent']:
-    #     for j in range(len(keys)):
-    #       if keys[j] == 'something':
-    #         keys[i] = str(original_var)       
-    # print(nonstandard_rules)
     
     return standardized_rules, variables
 
@@ -131,96 +120,30 @@ def unify(query, datum, variables):
     
     return unification, subs
 
+
 def apply(rule, goals, variables):
-    '''
-    @param rule: A rule that is being tested to see if it can be applied
-      This function should not modify rule; consider deepcopy.
-    @param goals: A list of propositions against which the rule's consequent will be tested
-      This function should not modify goals; consider deepcopy.
-    @param variables: list of strings that should be treated as variables
-
-    Rule application succeeds if the rule's consequent can be unified with any one of the goals.
-    
-    @return applications: a list, possibly empty, of the rule applications that
-       are possible against the present set of goals.
-       Each rule application is a copy of the rule, but with both the antecedents 
-       and the consequent modified using the variable substitutions that were
-       necessary to unify it to one of the goals. Note that this might require 
-       multiple sequential substitutions, e.g., converting ('x','eats','squirrel',False)
-       based on subs=={'x':'a', 'a':'bobcat'} yields ('bobcat','eats','squirrel',False).
-       The length of the applications list is 0 <= len(applications) <= len(goals).  
-       If every one of the goals can be unified with the rule consequent, then 
-       len(applications)==len(goals); if none of them can, then len(applications)=0.
-    @return goalsets: a list of lists of new goals, where len(newgoals)==len(applications).
-       goalsets[i] is a copy of goals (a list) in which the goal that unified with 
-       applications[i]['consequent'] has been removed, and replaced by 
-       the members of applications[i]['antecedents'].
-
-    Example:
-    rule={
-      'antecedents':[['x','is','nice',True],['x','is','hungry',False]],
-      'consequent':['x','eats','squirrel',False]
-    }
-    goals=[
-      ['bobcat','eats','squirrel',False],
-      ['bobcat','visits','squirrel',True],
-      ['bald eagle','eats','squirrel',False]
-    ]
-    variables=['x','y','a','b']
-
-    applications, newgoals = submitted.apply(rule, goals, variables)
-
-    applications==[
-      {
-        'antecedents':[['bobcat','is','nice',True],['bobcat','is','hungry',False]],
-        'consequent':['bobcat','eats','squirrel',False]
-      },
-      {
-        'antecedents':[['bald eagle','is','nice',True],['bald eagle','is','hungry',False]],
-        'consequent':['bald eagle','eats','squirrel',False]
-      }
-    ]
-    newgoals==[
-      [
-        ['bobcat','visits','squirrel',True],
-        ['bald eagle','eats','squirrel',False]
-        ['bobcat','is','nice',True],
-        ['bobcat','is','hungry',False]
-      ],[
-        ['bobcat','eats','squirrel',False]
-        ['bobcat','visits','squirrel',True],
-        ['bald eagle','is','nice',True],
-        ['bald eagle','is','hungry',False]
-      ]
-    '''
+  
     applications = []
     goalsets = []
     
-    for i in range(len(goals)):
-      unif, subs = unify(goals[i], rule['consequent'], variables)
+    for goal in goals:
+      rule_cpy = copy.deepcopy(rule)
+      unif, subs = unify(rule_cpy['consequent'], goal, variables) 
       if unif != None and subs != None:
-        temp = copy.deepcopy(rule)
-        temp['consequent'] = unif
-        for j in range(len(temp['antecedents'])):
-          for k in range(len(temp['antecedents'][j])):
-            if temp['antecedents'][j][k] in variables:
-              while temp['antecedents'][j][k] in variables:
-                temp['antecedents'][j][k] = subs[temp['antecedents'][j][k]]
-        applications.append(temp)
-    
-    for j in range(len(applications)):
-      for i in range(len(goals)):
-        if goals[i] == applications[j]['consequent']:
-          temp = copy.deepcopy(goals)
-          temp.remove(temp[i])
-          for k in range(len(applications[j]['antecedents'])):
-            temp.append(applications[j]['antecedents'][k])
-          goalsets.append(temp)
-    
-    
+        goals_cpy = copy.deepcopy(goals)
+        rule_cpy['consequent'] = unif
+        goals_cpy.remove(goal)
+        for i in range(len(rule_cpy['antecedents'])): 
+          for j in range(len(rule_cpy['antecedents'][i])):
+            cur_word = rule_cpy['antecedents'][i][j]
+            while  cur_word in subs:           
+              cur_word = subs[cur_word]
+            rule_cpy['antecedents'][i][j] = cur_word
+          goals_cpy.append(rule_cpy['antecedents'][i])         
+        applications.append(rule_cpy)      
+        goalsets.append(goals_cpy)
+          
     return applications, goalsets
-
-
 
 
 def backward_chain(query, rules, variables):
@@ -233,41 +156,25 @@ def backward_chain(query, rules, variables):
       that, when read in sequence, conclude by proving the truth of the query.
       If no proof of the query was found, you should return proof=None.
     '''
-    queue = []
+    proof = []
+    b_queue = queue.Queue()
     
     rules_cp = copy.deepcopy(rules)
     
-    for rule in rules_cp:
-      unif, subs = unify(query, rules_cp[rule]['consequent'], variables)
-      if unif != None and subs != None:
-        queue.append([rules_cp[rule]])
+    b_queue.put([query])
     
-    while queue and rules_cp:
-      # base case
-      s = queue.pop(0)
-      if s[0]['antecedents'] == []:
-        return s
-      # ----------------------------------------------------------------
-
-      for rule in list(rules_cp):
-        if 'triple' in rule:
-          # print(s[0]['antecedents'][0])
-          # print(rules_cp[rule]['consequent'])
-          # print('--------------------------------------------------------')
-          unif, subs = unify(s[0]['antecedents'][0], rules_cp[rule]['consequent'], variables)
-          if unif != None and subs != None:
-            s.insert(0, rules_cp[rule])
-            return s
-          else:
-            continue
-        else:
-          application, goalsets = apply(rules_cp[rule], s[0]['antecedents'][0], variables)
-          if application == [] and goalsets == []:
-            continue
-          else:
-            s.insert(0, application[0])
-            
-    # print(query)
-    # print(rules)
-    # print(variables)
+    while not b_queue.empty():
+      temp = b_queue.get()
+      if len(temp) == 0: break
+      for rule in rules:
+        if rule not in rules_cp: continue
+        applications, goalsets = apply(rules[rule], temp, variables)
+        if len(applications) > 0: 
+          del rules_cp[rule]
+          for app in applications:
+            proof.insert(0, app)
+          for goal in goalsets:
+            b_queue.put(goal)
+    if len(proof) > 0: return proof
+          
     return None
