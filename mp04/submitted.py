@@ -12,7 +12,7 @@ If you are not sure how to use PyTorch, you may want to take a look at the tutor
 
 import torch
 import torch.nn as nn
-
+import torch.nn.functional as F
 
 """
 1.  Build a neural network class.
@@ -24,9 +24,15 @@ class NeuralNet(torch.nn.Module):
         """
         super().__init__()
         ################# Your Code Starts Here #################
-        self.hidden = nn.Linear(2883, 300)
-        self.output = nn.Linear(300,5)
-        self.relu = nn.ReLU()
+        self.conv1 = nn.Conv2d(3, 9, 5)
+        # self.k = nn.MaxPool2d(2,2)
+        self.conv2 = nn.Conv2d(9, 16, 5)
+        self.l1 = nn.Linear(256, 100)
+        self.l2 = nn.Linear(100, 72)
+        self.l3 = nn.Linear(72, 5)
+        # self.hidden = nn.Linear(2883, 300)
+        # self.output = nn.Linear(300,5)
+        # self.relu = nn.ReLU()
 
         
         #raise NotImplementedError("You need to write this part!")
@@ -43,10 +49,23 @@ class NeuralNet(torch.nn.Module):
             y:      an (N, output_size) tensor of output from the network
         """
         ################# Your Code Starts Here #################   
-        x_temp = self.hidden(x)
-        x_temp = self.relu(x_temp)
-        y_pred = self.output(x_temp)
+        x_temp = torch.reshape(x, [len(x), 3,31,31])
+        x_temp = F.max_pool2d(F.relu(self.conv1(x_temp)), (2,2))
+        # x_temp = self.k(F.relu(self.conv1(x_temp)))
+        x_temp = F.max_pool2d(F.relu(self.conv2(x_temp)), 2)
+        x_temp = torch.flatten(x_temp, 1)
+        x_temp = F.relu(self.l1(x_temp))
+        x_temp = F.relu(self.l2(x_temp))
+        y_pred = self.l3(x_temp)
+        
         return y_pred
+        
+        
+        
+        # x_temp = self.hidden(x)
+        # x_temp = self.relu(x_temp)
+        # y_pred = self.output(x_temp)
+        # return y_pred
     
         #raise NotImplementedError("You need to write this part!")
         ################## Your Code Ends here ##################

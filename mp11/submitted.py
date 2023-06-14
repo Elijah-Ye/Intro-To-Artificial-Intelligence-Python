@@ -37,7 +37,16 @@ class q_learner():
         @return:
         None
         '''
-        raise RuntimeError('You need to write this!')
+        self.alpha = alpha
+        self.epsilon = epsilon
+        self.gamma = gamma 
+        self.nfirst = nfirst
+        
+        self.Q = np.zeros((state_cardinality[0], state_cardinality[1], state_cardinality[2], state_cardinality[3], state_cardinality[4], 3))
+        self.N = np.zeros((state_cardinality[0], state_cardinality[1], state_cardinality[2], state_cardinality[3], state_cardinality[4], 3))
+        
+        
+        #raise RuntimeError('You need to write this!')
 
     def report_exploration_counts(self, state):
         '''
@@ -53,7 +62,14 @@ class q_learner():
           number of times that each action has been explored from this state.
           The mapping from actions to integers is up to you, but there must be three of them.
         '''
-        raise RuntimeError('You need to write this!')
+        explored_count = np.zeros(3)
+        explored_count[0] = self.N[state[0]][state[1]][state[2]][state[3]][state[4]][0]
+        explored_count[1] = self.N[state[0]][state[1]][state[2]][state[3]][state[4]][1]
+        explored_count[2] = self.N[state[0]][state[1]][state[2]][state[3]][state[4]][2]
+        
+        return explored_count
+        
+        #raise RuntimeError('You need to write this!')
 
     def choose_unexplored_action(self, state):
         '''
@@ -74,7 +90,23 @@ class q_learner():
           Otherwise, choose one uniformly at random from those w/count less than n_explore.
           When you choose an action, you should increment its count in your counter table.
         '''
-        raise RuntimeError('You need to write this!')
+        action_list = []
+        if(self.N[state[0]][state[1]][state[2]][state[3]][state[4]][0] < self.nfirst):
+          action_list.append(0)
+        if(self.N[state[0]][state[1]][state[2]][state[3]][state[4]][1] < self.nfirst):
+          action_list.append(1)
+        if(self.N[state[0]][state[1]][state[2]][state[3]][state[4]][2] < self.nfirst):
+          action_list.append(-1)
+        
+        if(len(action_list) == 0): return None
+        else:
+          action = action_list[random.randrange(len(action_list))]
+          self.N[state[0]][state[1]][state[2]][state[3]][state[4]][action] = self.N[state[0]][state[1]][state[2]][state[3]][state[4]][action] + 1
+          return action
+         
+         
+    
+        #raise RuntimeError('You need to write this!')
 
     def report_q(self, state):
         '''
@@ -90,7 +122,13 @@ class q_learner():
           reward plus expected future utility of each of the three actions. 
           The mapping from actions to integers is up to you, but there must be three of them.
         '''
-        raise RuntimeError('You need to write this!')
+        current_Q = np.zeros(3)
+        current_Q[0] = self.Q[state[0]][state[1]][state[2]][state[3]][state[4]][0]
+        current_Q[1] = self.Q[state[0]][state[1]][state[2]][state[3]][state[4]][1]
+        current_Q[2] = self.Q[state[0]][state[1]][state[2]][state[3]][state[4]][2]
+        
+        return current_Q
+        #raise RuntimeError('You need to write this!')
 
     def q_local(self, reward, newstate):
         '''
@@ -107,7 +145,9 @@ class q_learner():
         @return:
         Q_local (scalar float): the local value of Q
         '''
-        raise RuntimeError('You need to write this!')
+        Q_local = reward + self.gamma * max(self.report_q(newstate))
+        return Q_local
+        #raise RuntimeError('You need to write this!')
 
     def learn(self, state, action, reward, newstate):
         '''
@@ -125,7 +165,11 @@ class q_learner():
         @return:
         None
         '''
-        raise RuntimeError('You need to write this!')
+        self.Q[state[0]][state[1]][state[2]][state[3]][state[4]][action] = self.Q[state[0]][state[1]][state[2]][state[3]][state[4]][action] + self.alpha * (self.q_local(reward, newstate) - self.Q[state[0]][state[1]][state[2]][state[3]][state[4]][action])
+        
+  
+      
+        #raise RuntimeError('You need to write this!')
     
     def save(self, filename):
         '''
@@ -139,7 +183,9 @@ class q_learner():
         @return:
         None
         '''
-        raise RuntimeError('You need to write this!')
+        np.savez(filename, Q=self.Q, N=self.N)
+        
+        #raise RuntimeError('You need to write this!')
         
     def load(self, filename):
         '''
@@ -153,7 +199,11 @@ class q_learner():
         @return:
         None
         '''
-        raise RuntimeError('You need to write this!')
+        data = np.load(filename)
+        self.Q = data['Q']
+        self.N = data['N']
+        
+        #raise RuntimeError('You need to write this!')
         
     def exploit(self, state):
         '''
@@ -170,7 +220,13 @@ class q_learner():
         Q (scalar float): 
           The Q-value of the selected action
         '''
-        raise RuntimeError('You need to write this!')
+        q_current = list(self.report_q(state))
+        action = q_current.index(max(q_current))
+        if(action == 2):
+          return -1, q_current[action]
+        else:
+          return action, q_current[action]
+        #raise RuntimeError('You need to write this!')
     
     def act(self, state):
         '''
@@ -191,7 +247,34 @@ class q_learner():
         0 if the paddle should be stationary
         1 if the paddle should move downward
         '''
-        raise RuntimeError('You need to write this!')
+        action_list = []
+        if(self.N[state[0]][state[1]][state[2]][state[3]][state[4]][0] < self.nfirst):
+          action_list.append(0)
+        if(self.N[state[0]][state[1]][state[2]][state[3]][state[4]][1] < self.nfirst):
+          action_list.append(1)
+        if(self.N[state[0]][state[1]][state[2]][state[3]][state[4]][2] < self.nfirst):
+          action_list.append(-1)
+        
+        if(len(action_list) == 0): 
+          test = np.random.choice(np.arange(0, 2), p=[self.epsilon, 1 - self.epsilon])
+          if(test == 1):
+            q_current = list(self.report_q(state))
+            action = q_current.index(max(q_current))
+            self.N[state[0]][state[1]][state[2]][state[3]][state[4]][action] = self.N[state[0]][state[1]][state[2]][state[3]][state[4]][action] + 1
+            if(action == 2): return -1
+            else: return action
+          else:
+            action_list = [0, 1, -1]
+            action = action_list[random.randrange(len(action_list))]
+            self.N[state[0]][state[1]][state[2]][state[3]][state[4]][action] = self.N[state[0]][state[1]][state[2]][state[3]][state[4]][action] + 1
+            return action
+            
+        else:
+          action = action_list[random.randrange(len(action_list))]
+          self.N[state[0]][state[1]][state[2]][state[3]][state[4]][action] = self.N[state[0]][state[1]][state[2]][state[3]][state[4]][action] + 1
+          return action
+        
+        #raise RuntimeError('You need to write this!')
 
 class deep_q():
     def __init__(self, alpha, epsilon, gamma, nfirst):
